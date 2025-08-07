@@ -21,3 +21,4 @@ jobs:
           context: DockerFileFolder/
           push: true
           tags: abdullahsajid26/test-repo:latest
+          
