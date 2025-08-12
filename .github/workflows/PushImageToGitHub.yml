@@ -1,36 +1,36 @@
 name: "ECR-EC2-Deployment"
 
 on:
-  workflow_dispatch: # Manual trigger
+  workflow_dispatch: 
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: us-east-1  # Public ECR is always in us-east-1
 
-      # 3. Login to Amazon ECR
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      # 4. Build, tag, and push image to ECR
-      - name: Build, tag, and push Docker image
+      - name: Authenticate Docker to Public ECR
         run: |
-          IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/dockerhubimage:latest
-          docker build -t public.ecr.aws/n5x0z5m1/dockerhubimages .
-          docker push public.ecr.aws/n5x0z5m1/dockerhubimages
+          aws ecr-public get-login-password --region us-east-1 \
+            | docker login --username AWS --password-stdin public.ecr.aws
+
+      - name: Build Docker image
+        run: docker build -t dockerhubimages .
+
+      - name: Tag Docker image
+        run: docker tag dockerhubimages:latest public.ecr.aws/n5x0z5m1/dockerhubimages:latest
+
+      - name: Push Docker image to Public ECR
+        run: docker push public.ecr.aws/n5x0z5m1/dockerhubimages:latest
 
       # 5. SSH into EC2 and update container
       # - name: SSH to EC2 and deploy new container
